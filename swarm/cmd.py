@@ -44,6 +44,6 @@ def run():
             torrent_file=arguments['<torrent>'],
             saveas=arguments['<file>'],
             ip=arguments['<ip>'],
-            verbose=arguments['verbose'],
+            verbose=arguments['--verbose'],
             port=int(arguments['--port']),
         )
