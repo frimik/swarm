@@ -125,7 +125,7 @@ class Client(object):
             self.num_seeds = statistics.numSeeds
             self.distributed_copies = 0.001 * int(1000 * statistics.numCopies)
             self.torrent_rate = float(statistics.torrentRate) / (1 << 10)
-            self.peers_percent_done = 100.0 if self.num_peers == 0 else statistics.percentDone
+            self.peers_percent_done = statistics.percentDone
 
         if self.activity and self.verbose:
             if self.is_seed and self.finished_at:
