@@ -7,13 +7,13 @@ from os.path import abspath
 from swarm.utils import spawn_later
 import hashlib
 import random
-import sys
 
 
 class Swarm(object):
-    def __init__(self, is_seed):
+    def __init__(self, verbose=None):
+        self.verbose = verbose
+
         self.id = createPeerID()
-        self.is_seed = is_seed
 
         self.done_flag = Event()
         self.done = False
@@ -110,11 +110,10 @@ class Swarm(object):
             self.peers_percent_done = statistics.percentDone
             self.torrent_rate = float(statistics.torrentRate) / (1 << 10)
 
-        if self.activity:
+        if self.activity and self.verbose:
             print '%.2f%% complete (down: %.1f kb/s up: %.1f kB/s peers: %d seeds: %d) %s' % (
                 self.percent_done, self.download_rate, self.upload_rate, self.num_peers, self.num_seeds, self.activity
             )
-            sys.stdout.flush()
 
         dpflag.set()
 
@@ -129,8 +128,8 @@ class Swarm(object):
         self.downloadTo = path
 
 
-def run(torrent_file, ip, saveas, is_seed, port):
-    swarm = Swarm(is_seed)
+def run(torrent_file, ip, saveas, port, verbose=True):
+    swarm = Swarm(verbose)
     rawserver = None
 
     try:

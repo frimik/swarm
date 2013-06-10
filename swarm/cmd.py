@@ -2,11 +2,12 @@
 
 Usage:
   swarm torrent <file> <tracker> <torrent>
-  swarm seed <torrent> <file> <ip> [--port=<port>]
-  swarm peer <torrent> <file> <ip> [--port=<port>]
+  swarm seed <torrent> <file> <ip> [--port=<port>] [--verbose]
+  swarm peer <torrent> <file> <ip> [--port=<port>] [--verbose]
 
 Options:
-  -h --help     Show this screen.
+  -h --help      Show this screen.
+  --verbose      Constantly print status information.
   --port=<port>  Port to listen on. [default: 54321].
 """
 from docopt import docopt
@@ -43,6 +44,6 @@ def run():
             torrent_file=arguments['<torrent>'],
             saveas=arguments['<file>'],
             ip=arguments['<ip>'],
-            is_seed=arguments['seed'],
+            verbose=arguments['verbose'],
             port=int(arguments['--port']),
         )
