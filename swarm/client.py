@@ -69,7 +69,10 @@ class Swarm(object):
                   statistics=None, spew=None, sizeDone=None, activity=None):
 
         if fractionDone is not None:
-            self.percent_done = float(int(fractionDone * 1000)) / 10
+            if self.done:
+                self.percent_done = 100.0
+            else:
+                self.percent_done = float(int(fractionDone * 1000)) / 10
 
         if timeEst is not None:
             self.time_estimate = timeEst
