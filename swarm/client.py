@@ -5,6 +5,7 @@ from BitTornado import createPeerID
 from threading import Event
 from os.path import abspath
 from swarm.utils import spawn_later
+from colors import white, green, yellow
 import hashlib
 import random
 
@@ -116,12 +117,21 @@ class Swarm(object):
 
         if self.activity and self.verbose:
             if self.is_seed and self.done:
-                print '%.2f%% complete (torrent: %.1f kb/s peers: %d)' % (
-                    self.peers_percent_done, self.torrent_rate, self.num_peers)
+                print '%s %s complete (torrent: %s kb/s peers: %s seeds: %s)' % (
+                    green('[swarm]'),
+                    white('%.2f%%' % self.peers_percent_done),
+                    white('%.1f' % self.torrent_rate),
+                    white('%d' % self.num_peers),
+                    white('%s' % self.num_seeds))
             else:
-                print '%.2f%% complete (down: %.1f kb/s up: %.1f kB/s peers: %d seeds: %d) %s' % (
-                    self.percent_done, self.download_rate, self.upload_rate,
-                    self.num_peers, self.num_seeds, self.activity)
+                print '%s %s complete (down: %s kb/s up: %s kB/s peers: %s seeds: %s) %s' % (
+                    green('[swarm]'),
+                    white('%.2f%%' % self.percent_done),
+                    white('%.1f' % self.download_rate),
+                    white('%.1f' % self.upload_rate),
+                    white('%d' % self.num_peers),
+                    white('%d' % self.num_seeds),
+                    yellow(self.activity))
 
         dpflag.set()
 
