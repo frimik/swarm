@@ -15,7 +15,11 @@ setup(
     author_email='stanislav@hammerandchisel.com',
     url='https://github.com/phoenixguild/swarm',
     license='MIT',
-    scripts=['bin/swarm'],
+    entry_points={
+        'console_scripts': [
+            'swarm = swarm.cli:main',
+        ],
+    },
     include_package_data=True,
     description=DESCRIPTION,
     long_description=LONG_DESCRIPTION,

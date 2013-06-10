@@ -2,76 +2,91 @@ from BitTornado.download_bt1 import BT1Download, defaults, get_response
 from BitTornado.RawServer import RawServer
 from BitTornado.bencode import bencode
 from BitTornado import createPeerID
-from threading import Event
-from os.path import abspath
-from swarm.utils import spawn_later
-from colors import white, green, yellow
+from swarm.concurrent import spawn_later, Event
+from swarm.tracker import Tracker
+from swarm import output
+from datetime import datetime, timedelta
 import hashlib
 import random
 
 
-class Swarm(object):
-    def __init__(self, is_seed=False, verbose=False):
+class Client(object):
+    def __init__(self, torrent_file, destination_file, ip, port, is_seed=False, verbose=True):
+        self.torrent_file = torrent_file
+        self.destination_file = destination_file
+        self.ip = ip
+        self.port = port
         self.is_seed = is_seed
         self.verbose = verbose
 
         self.id = createPeerID()
 
         self.done_flag = Event()
-        self.done = False
-        self.file = ''
+        self.finished_at = None
 
+        # Client statistics.
         self.percent_done = 0.0
         self.download_rate = 0.0
         self.upload_rate = 0.0
         self.time_estimate = 0.0
 
+        # Torrent statistics.
         self.ratio = 0.0
         self.upload_total = 0.0
         self.download_total = 0.0
         self.distributed_copies = 0.0
         self.peers_percent_done = 0.0
         self.torrent_rate = 0.0
-
         self.num_peers = 0
         self.num_seeds = 0
         self.num_old_seeds = 0
 
-        self.activity = ''
-        self.downloadTo = ''
+        # Activity message.
+        self.activity = None
+
+        if is_seed:
+            # Seeed is also the tracker.
+            output.write('[green][swarm][/green] [white]starting tracker[/white]')
+            self.tracker = Tracker()
+            self.tracker.start()
+
+        # Start the shutdown checker.
+        self.maybe_shutdown()
+
+    def maybe_shutdown(self):
+        """Shutsdown if no peers have connected within 5 seconds of finishing."""
+        if self.num_peers == 0 and \
+                (self.finished_at and self.finished_at < datetime.now() - timedelta(seconds=5)) and \
+                (not self.is_seed or self.tracker.leechers == 0):
+            self.done_flag.set()
+        else:
+            spawn_later(1, self.maybe_shutdown)
 
     def on_finish(self):
-        self.done = True
+        self.finished_at = datetime.now()
         self.percent_done = 100.0
         self.download_rate = 0.0
         self.activity = 'seeding'
 
-    def maybe_shut_down(self):
-        if self.num_seeds == 0 and self.num_peers == 0:
-            self.done_flag.set()
-        else:
-            spawn_later(5, self.maybe_shut_down)
-
     def on_fail(self):
-        self.done = True
+        self.finished_at = datetime.now()
         self.percent_done = 0.0
         self.download_rate = 0.0
         self.activity = 'failed'
         self.done_flag.set()
 
-    def on_error(self, errormsg):
-        print 'ERROR', errormsg
+    def on_error(self, msg):
+        output.write('[red]%s[/red]', msg)
         self.done_flag.set()
 
     def on_exception(self, excmsg):
-        print 'EXCEPTION', excmsg
+        output.write('[red]%s[/red]', excmsg)
 
     # noinspection PyUnusedLocal
     def on_status(self, dpflag=Event(), fractionDone=None, timeEst=None, downRate=None, upRate=None,
                   statistics=None, spew=None, sizeDone=None, activity=None):
-
         if fractionDone is not None:
-            if self.done:
+            if self.finished_at:
                 self.percent_done = 100.0
             else:
                 self.percent_done = float(int(fractionDone * 1000)) / 10
@@ -84,6 +99,7 @@ class Swarm(object):
 
             self.activity = 'downloading '
 
+            # Format time.
             if h > 0:
                 self.activity += '%dh%02dm%02ds' % (h, m, s)
             elif m > 0:
@@ -101,10 +117,6 @@ class Swarm(object):
             self.upload_rate = float(upRate) / (1 << 10)
 
         if statistics is not None:
-            if self.num_peers > 0 or self.num_seeds > 0:
-                if statistics.numPeers == 0 and statistics.numSeeds == 0:
-                    spawn_later(5, self.maybe_shut_down)
-
             self.ratio = statistics.shareRating
             self.upload_total = float(statistics.upTotal) / (1 << 20)
             self.download_total = float(statistics.downTotal) / (1 << 20)
@@ -112,112 +124,96 @@ class Swarm(object):
             self.num_old_seeds = statistics.numOldSeeds
             self.num_seeds = statistics.numSeeds
             self.distributed_copies = 0.001 * int(1000 * statistics.numCopies)
-            self.peers_percent_done = statistics.percentDone
             self.torrent_rate = float(statistics.torrentRate) / (1 << 10)
+            self.peers_percent_done = 100.0 if self.num_peers == 0 else statistics.percentDone
 
         if self.activity and self.verbose:
-            if self.is_seed and self.done:
-                print '%s %s (torrent: %skb/s peers: %s seeds: %s) %s' % (
-                    green('[swarm]'),
-                    white('%.2f%%' % self.peers_percent_done if self.num_peers else '???'),
-                    white('%.1f' % self.torrent_rate),
-                    white('%d' % self.num_peers),
-                    white('%s' % self.num_seeds),
-                    yellow(activity or 'seeding'))
+            if self.is_seed and self.finished_at:
+                output.write('[green][swarm][/green] [white]%.2f%%[/white] '
+                             '(torrent: [white]%.1f[/white] kb/s peers: [white]%d[/white] seeds: [white]%d[/white]) '
+                             '[yellow]%s[/yellow]',
+                             self.peers_percent_done, self.torrent_rate, self.num_peers, self.num_seeds, self.activity)
             else:
-                print '%s %s (down: %skb/s up: %skb/s peers: %s seeds: %s) %s' % (
-                    green('[swarm]'),
-                    white('%.2f%%' % self.percent_done),
-                    white('%.1f' % self.download_rate),
-                    white('%.1f' % self.upload_rate),
-                    white('%d' % self.num_peers),
-                    white('%d' % self.num_seeds),
-                    yellow(self.activity))
+                output.write('[green][swarm][/green] [white]%.2f%%[/white] '
+                             '(down: [white]%.1f[/white] kb/s up: [white]%.1f[/white] kb/s '
+                             'peers: [white]%d[/white] seeds: [white]%d[/white]) [yellow]%s[/yellow]',
+                             self.percent_done, self.download_rate, self.upload_rate, self.num_peers,
+                             self.num_seeds, self.activity)
 
+        # Format downloader that displaying finished.
         dpflag.set()
 
-    def chooseFile(self, default, size, saveas, dir):
-        self.file = '%s (%.1f MB)' % (default, float(size) / (1 << 20))
-        if saveas != '':
-            default = saveas
-        self.downloadTo = abspath(default)
-        return default
+    def start(self):
+        rawserver = None
 
-    def newpath(self, path):
-        self.downloadTo = path
+        try:
+            config = {k: v for k, v, _ in defaults}
+            config['ip'] = self.ip
+            config['responsefile'] = self.torrent_file
+            config['saveas'] = self.destination_file
 
+            random.seed(self.id)
 
-def run(torrent_file, ip, saveas, port, is_seed=False, verbose=True):
-    swarm = Swarm(is_seed, verbose)
-    rawserver = None
+            rawserver = RawServer(
+                doneflag=self.done_flag,
+                timeout_check_interval=config['timeout_check_interval'],
+                timeout=config['timeout'],
+                ipv6_enable=config['ipv6_enabled'],
+                failfunc=self.on_fail,
+                errorfunc=self.on_exception)
+            rawserver.bind(
+                port=self.port,
+                bind=config['bind'],
+                reuse=True,
+                ipv6_socket_style=config['ipv6_binds_v4'])
 
-    try:
-        config = {k: v for k, v, _ in defaults}
-        config['ip'] = ip
-        config['responsefile'] = torrent_file
-        config['saveas'] = saveas
-        config['selector_enabled'] = False
+            # Download torrent metadata.
+            response = get_response(
+                file=config['responsefile'],
+                url=config['url'],
+                errorfunc=self.on_error)
 
-        random.seed(swarm.id)
+            # Bail if tracker is done.
+            if not response:
+                return
 
-        rawserver = RawServer(
-            doneflag=swarm.done_flag,
-            timeout_check_interval=config['timeout_check_interval'],
-            timeout=config['timeout'],
-            ipv6_enable=config['ipv6_enabled'],
-            failfunc=swarm.on_fail,
-            errorfunc=swarm.on_exception)
-        rawserver.bind(
-            port=port,
-            bind=config['bind'],
-            reuse=True,
-            ipv6_socket_style=config['ipv6_binds_v4'])
+            dow = BT1Download(
+                statusfunc=self.on_status,
+                finfunc=self.on_finish,
+                errorfunc=self.on_error,
+                excfunc=self.on_exception,
+                doneflag=self.done_flag,
+                config=config,
+                response=response,
+                infohash=hashlib.sha1(bencode(response['info'])).digest(),
+                id=self.id,
+                rawserver=rawserver,
+                port=self.port)
 
-        response = get_response(
-            file=config['responsefile'],
-            url=config['url'],
-            errorfunc=swarm.on_error)
+            if not dow.saveAs(lambda default, size, saveas, dir: saveas if saveas else default):
+                return
 
-        if not response:
-            return
+            if not dow.initFiles(old_style=True):
+                return
 
-        dow = BT1Download(
-            statusfunc=swarm.on_status,
-            finfunc=swarm.on_finish,
-            errorfunc=swarm.on_error,
-            excfunc=swarm.on_exception,
-            doneflag=swarm.done_flag,
-            config=config,
-            response=response,
-            infohash=hashlib.sha1(bencode(response['info'])).digest(),
-            id=swarm.id,
-            rawserver=rawserver,
-            port=port)
+            if not dow.startEngine():
+                dow.shutdown()
+                return
 
-        if not dow.saveAs(swarm.chooseFile, swarm.newpath):
-            return
+            dow.startRerequester()
+            dow.autoStats()
 
-        if not dow.initFiles(old_style=True):
-            return
+            if not dow.am_I_finished():
+                self.on_status(activity='connecting to peers')
 
-        if not dow.startEngine():
+            rawserver.listen_forever(dow.getPortHandler())
+
+            self.on_status(activity='shutting down')
+
             dow.shutdown()
-            return
+        finally:
+            if rawserver:
+                rawserver.shutdown()
 
-        dow.startRerequester()
-        dow.autoStats()
-
-        if not dow.am_I_finished():
-            swarm.on_status(activity='connecting to peers')
-
-        rawserver.listen_forever(dow.getPortHandler())
-
-        swarm.on_status(activity='shutting down')
-
-        dow.shutdown()
-    finally:
-        if rawserver:
-            rawserver.shutdown()
-
-        if not swarm.done:
-            swarm.on_fail()
+            if not self.finished_at:
+                self.on_fail()
