@@ -96,9 +96,6 @@ class Swarm(object):
             self.upload_rate = float(upRate) / (1 << 10)
 
         if statistics is not None:
-            if all(statistics.filecomplete):
-                self.percent_done = 100.0
-
             if self.num_peers > 0 or self.num_seeds > 0:
                 if statistics.numPeers == 0 and statistics.numSeeds == 0:
                     spawn_later(5, self.maybe_shut_down)
