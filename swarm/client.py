@@ -117,14 +117,15 @@ class Swarm(object):
 
         if self.activity and self.verbose:
             if self.is_seed and self.done:
-                print '%s %s complete (torrent: %s kb/s peers: %s seeds: %s)' % (
+                print '%s %s (torrent: %s kb/s peers: %s seeds: %s) %s' % (
                     green('[swarm]'),
                     white('%.2f%%' % self.peers_percent_done),
                     white('%.1f' % self.torrent_rate),
                     white('%d' % self.num_peers),
-                    white('%s' % self.num_seeds))
+                    white('%s' % self.num_seeds),
+                    yellow('seeding'))
             else:
-                print '%s %s complete (down: %s kb/s up: %s kB/s peers: %s seeds: %s) %s' % (
+                print '%s %s (down: %s kb/s up: %s kB/s peers: %s seeds: %s) %s' % (
                     green('[swarm]'),
                     white('%.2f%%' % self.percent_done),
                     white('%.1f' % self.download_rate),
