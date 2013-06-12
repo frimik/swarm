@@ -45,9 +45,9 @@ class Client(object):
         self.activity = None
 
         if is_seed:
-            # Seeed is also the tracker.
+            # Seed is also the tracker.
             output.write('[green][swarm][/green] [white]starting tracker[/white]')
-            self.tracker = Tracker()
+            self.tracker = Tracker(port + 1000)
             self.tracker.start()
 
         # Start the shutdown checker.

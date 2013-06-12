@@ -12,7 +12,7 @@ class HTTPHandler(_HTTPHandler):
 
 
 class Tracker(object):
-    def __init__(self, port=8998):
+    def __init__(self, port):
         self.port = port
         self._tracker = None
 

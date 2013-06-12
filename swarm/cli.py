@@ -8,7 +8,7 @@ Usage:
 Options:
   -h --help      Show this screen.
   --verbose      Constantly print status information.
-  --port=<port>  Port peer should listen on. [default: 8999].
+  --port=<port>  Port peer should listen on. [default: 7998].
 """
 from docopt import docopt
 from swarm.client import Client
