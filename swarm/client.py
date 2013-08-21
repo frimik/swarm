@@ -147,7 +147,7 @@ class Client(object):
         rawserver = None
 
         try:
-            config = {k: v for k, v, _ in defaults}
+            config = dict([(v[0], v[1]) for v in defaults])
             config['ip'] = self.ip
             config['responsefile'] = self.torrent_file
             config['saveas'] = self.destination_file
