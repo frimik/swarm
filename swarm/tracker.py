@@ -17,7 +17,7 @@ class Tracker(object):
         self._tracker = None
 
     def start(self):
-        config = {k: v for k, v, _ in defaults}
+        config = dict([(v[0], v[1]) for v in defaults])
         config['dfile'] = tempfile.mktemp()  # Use temporary file since it won't be reused.
         config['port'] = self.port
 
