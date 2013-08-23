@@ -2,13 +2,14 @@
 
 Usage:
   swarm torrent <source> <tracker> <torrent>
-  swarm seed <torrent> <destination> <ip> [--port=<port>] [--verbose]
-  swarm peer <torrent> <destination> <ip> [--port=<port>] [--verbose]
+  swarm seed <torrent> <destination> <ip> [--port=<port>] [--timeout=N] [--verbose]
+  swarm peer <torrent> <destination> <ip> [--port=<port>] [--timeout=N] [--verbose]
 
 Options:
   -h --help      Show this screen.
   --verbose      Constantly print status information.
   --port=<port>  Port peer should listen on. [default: 7998].
+  --timeout=<s>  Number of seconds to seed after last leecher disconnected. [default: 5].
 """
 from docopt import docopt
 from swarm.client import Client
@@ -30,6 +31,7 @@ def main():
             is_seed=arguments['seed'],
             verbose=arguments['--verbose'],
             ip=arguments['<ip>'],
+            peer_timeout=int(arguments['--timeout']),
             port=int(arguments['--port']))
         client.start()
 

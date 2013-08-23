@@ -11,13 +11,14 @@ import random
 
 
 class Client(object):
-    def __init__(self, torrent_file, destination_file, ip, port, is_seed=False, verbose=True):
+    def __init__(self, torrent_file, destination_file, ip, port, is_seed=False, verbose=True, peer_timeout=5):
         self.torrent_file = torrent_file
         self.destination_file = destination_file
         self.ip = ip
         self.port = port
         self.is_seed = is_seed
         self.verbose = verbose
+        self.peer_timeout = peer_timeout
 
         self.id = createPeerID()
 
@@ -54,9 +55,9 @@ class Client(object):
         self.maybe_shutdown()
 
     def maybe_shutdown(self):
-        """Shutsdown if no peers have connected within 5 seconds of finishing."""
+        """Shuts down if no peers have connected within peer_timeout seconds of finishing."""
         if self.num_peers == 0 and \
-                (self.finished_at and self.finished_at < datetime.now() - timedelta(seconds=5)) and \
+                (self.finished_at and self.finished_at < datetime.now() - timedelta(seconds=self.peer_timeout)) and \
                 (not self.is_seed or self.tracker.leechers == 0):
             self.done_flag.set()
         else:
