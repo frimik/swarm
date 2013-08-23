@@ -3,7 +3,7 @@
 from bencode import bencode, bdecode
 from BT1.btformats import check_info
 from os.path import exists, isfile
-from sha import sha
+from hashlib import sha1 as sha
 import sys, os
 
 try:

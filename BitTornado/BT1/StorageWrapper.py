@@ -2,7 +2,7 @@
 # see LICENSE.txt for license information
 
 from BitTornado.bitfield import Bitfield
-from sha import sha
+from hashlib import sha1 as sha
 from BitTornado.clock import clock
 from traceback import print_exc
 from random import randrange

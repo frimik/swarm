@@ -22,7 +22,7 @@ from traceback import print_exc
 from time import time, gmtime, strftime, localtime
 from BitTornado.clock import clock
 from random import shuffle, seed, randrange
-from sha import sha
+from hashlib import sha1 as sha
 from types import StringType, IntType, LongType, ListType, DictType
 from binascii import b2a_hex, a2b_hex, a2b_base64
 from string import lower

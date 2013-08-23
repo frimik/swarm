@@ -12,7 +12,7 @@ from cStringIO import StringIO
 from traceback import print_exc
 from socket import error, gethostbyname
 from random import shuffle
-from sha import sha
+from hashlib import sha1 as sha
 from time import time
 try:
     from os import getpid
